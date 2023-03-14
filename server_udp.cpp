@@ -1,5 +1,61 @@
 #include "server_udp.h"
 
+int create_udp_sock()
+{
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    assert(fd >= 0);
+
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(SERVER_PORT);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    int ret = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
+    assert(ret != -1);
+
+    return fd;
+}
+
+int msleep(long msec)
+{
+    struct timespec ts;
+    int res;
+
+    if (msec < 0)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ts.tv_sec = msec / 1000;
+    ts.tv_nsec = (msec % 1000) * 1000000;
+
+    do
+    {
+        res = nanosleep(&ts, &ts);
+    } while (res && errno == EINTR);
+
+    return res;
+}
+
+int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
+{
+    int fd = *(int *)user;
+    size_t t_len = 0;
+    char t_buf[BUFF_LEN];
+    struct sockaddr_in client_addr;
+
+    ssize_t count = recvfrom(fd, t_buf, BUFF_LEN, 0, (struct sockaddr *)&client_addr, (socklen_t *)t_len);
+    assert(count != -1);
+
+    printf("Client:\n%s\n", t_buf);
+    count = sendto(fd, buf, len, 0, (struct sockaddr *)&client_addr, t_len);
+    assert(count != -1);
+
+    return 0;
+}
+
 void handle_udp_msg(int fd)
 {
     char buf[BUFF_LEN]; // 接收缓冲区，1024字节
@@ -31,30 +87,24 @@ void handle_udp_msg(int fd)
 
 int main(int argc, char *argv[])
 {
-    int server_fd, ret;
-    struct sockaddr_in ser_addr;
+    int sockfd = create_udp_sock();
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 
-    server_fd = socket(AF_INET, SOCK_DGRAM, 0); // AF_INET:IPV4;SOCK_DGRAM:UDP
-    if (server_fd < 0)
+    ikcpcb *kcp = ikcp_create(0x00112233, (void *)&sockfd);
+    ikcp_setoutput(kcp, udp_output);
+
+    IUINT32 current = iclock(), slap = current + 20;
+
+    while (1)
     {
-        printf("create socket fail!\n");
-        return -1;
-    }
+        isleep(1);
+        current = iclock();
+        ikcp_update(kcp, iclock());
+    };
 
-    memset(&ser_addr, 0, sizeof(ser_addr));
-    ser_addr.sin_family = AF_INET;
-    ser_addr.sin_addr.s_addr = htonl(INADDR_ANY); // IP地址，需要进行网络序转换，INADDR_ANY：本地地址
-    ser_addr.sin_port = htons(SERVER_PORT);       // 端口号，需要网络序转换
+    // handle_udp_msg(sockfd); // 处理接收到的数据
 
-    ret = bind(server_fd, (struct sockaddr *)&ser_addr, sizeof(ser_addr));
-    if (ret < 0)
-    {
-        printf("socket bind fail!\n");
-        return -1;
-    }
-
-    handle_udp_msg(server_fd); // 处理接收到的数据
-
-    close(server_fd);
+    ikcp_release(kcp);
+    close(sockfd);
     return 0;
 }
