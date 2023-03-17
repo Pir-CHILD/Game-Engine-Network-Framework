@@ -14,7 +14,7 @@
 #include "ikcp.h"
 
 #define SERVER_PORT 12306
-#define BUFF_LEN 1024
+#define BUFF_LEN 2000
 #define SERVER_IP "127.0.0.1"
 
 /* get system time */
@@ -78,5 +78,9 @@ static inline void isleep(unsigned long millisecond)
     Sleep(millisecond);
 #endif
 }
+
+int create_udp_sock();
+int udp_output(const char *buf, int len, ikcpcb *kcp, void *user);
+void udp_msg_sender(int fd, struct sockaddr *dst);
 
 #endif

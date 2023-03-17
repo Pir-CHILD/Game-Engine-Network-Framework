@@ -4,7 +4,7 @@ struct sockaddr_in server_addr;
 
 int create_udp_sock()
 {
-    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    int fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
     assert(fd >= 0);
 
     return fd;
@@ -13,11 +13,9 @@ int create_udp_sock()
 int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
 {
     int fd = *(int *)user;
-    size_t t_len = 0;
-    char t_buf[BUFF_LEN];
 
     printf("Client send: %s\n", buf);
-    sendto(fd, buf, len, t_len, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    sendto(fd, buf, len, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
 
     return 0;
 }
@@ -82,7 +80,6 @@ int main(int argc, char *argv[])
         {
             ((IUINT32 *)buf)[0] = index++;
             ((IUINT32 *)buf)[1] = current;
-
             ikcp_send(kcp, buf, 8);
         }
 
@@ -94,7 +91,7 @@ int main(int argc, char *argv[])
                 break;
             ikcp_input(kcp, buf, hr);
         }
-
+        printf("1\n");
         while (1)
         {
             hr = ikcp_recv(kcp, buf, 10);
@@ -108,7 +105,7 @@ int main(int argc, char *argv[])
             if (sn != next)
             {
                 printf("ERROR sn %d<->%d\n", (int)count, (int)next);
-                return;
+                return -1;
             }
 
             next++;
