@@ -1,5 +1,7 @@
 #include "client_udp.h"
 
+struct sockaddr_in server_addr;
+
 int create_udp_sock()
 {
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -13,12 +15,6 @@ int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
     int fd = *(int *)user;
     size_t t_len = 0;
     char t_buf[BUFF_LEN];
-    struct sockaddr_in server_addr;
-
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
-    server_addr.sin_port = htons(SERVER_PORT);
 
     printf("Client send: %s\n", buf);
     sendto(fd, buf, len, t_len, (struct sockaddr *)&server_addr, sizeof(server_addr));
@@ -56,6 +52,11 @@ int main(int argc, char *argv[])
     int client_fd = create_udp_sock();
     ikcpcb *kcp = ikcp_create(0x00112233, (void *)&client_fd);
 
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
+    server_addr.sin_port = htons(SERVER_PORT);
+
     ikcp_setoutput(kcp, udp_output);
 
     IUINT32 current = iclock();
@@ -68,6 +69,8 @@ int main(int argc, char *argv[])
 
     ikcp_wndsize(kcp, 128, 128);
     ikcp_nodelay(kcp, 0, 10, 0, 1);
+
+    IUINT32 ts1 = iclock();
 
     while (1)
     {
@@ -85,11 +88,48 @@ int main(int argc, char *argv[])
 
         while (1)
         {
-            hr = ikcp_recv(kcp, buf, 10);
+            socklen_t len = sizeof(server_addr);
+            hr = recvfrom(client_fd, buf, BUFF_LEN, 0, (struct sockaddr *)&server_addr, &len);
             if (hr < 0)
                 break;
+            ikcp_input(kcp, buf, hr);
         }
+
+        while (1)
+        {
+            hr = ikcp_recv(kcp, buf, 10);
+
+            if (hr < 0)
+                break;
+            IUINT32 sn = *(IUINT32 *)(buf + 0);
+            IUINT32 ts = *(IUINT32 *)(buf + 4);
+            IUINT32 rtt = current - ts;
+
+            if (sn != next)
+            {
+                printf("ERROR sn %d<->%d\n", (int)count, (int)next);
+                return;
+            }
+
+            next++;
+            sumrtt += rtt;
+            count++;
+            if (rtt > (IUINT32)maxrtt)
+                maxrtt = rtt;
+
+            printf("[RECV] mode=%d sn=%d rtt=%d\n", 1, (int)sn, (int)rtt);
+        }
+        if (next > 1000)
+            break;
     }
+
+    ts1 = iclock() - ts1;
+
+    ikcp_release(kcp);
+
+    const char *names[3] = {"default", "normal", "fast"};
+    printf("%s mode result (%dms):\n", names[1], (int)ts1);
+    printf("avgrtt=%d maxrtt=%d tx=%d\n", (int)(sumrtt / count), (int)maxrtt, (int)0);
 
     // udp_msg_sender(client_fd, (struct sockaddr *)&ser_addr);
 
