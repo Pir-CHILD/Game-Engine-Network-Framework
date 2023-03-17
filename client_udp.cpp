@@ -1,5 +1,31 @@
 #include "client_udp.h"
 
+int create_udp_sock()
+{
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    assert(fd >= 0);
+
+    return fd;
+}
+
+int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
+{
+    int fd = *(int *)user;
+    size_t t_len = 0;
+    char t_buf[BUFF_LEN];
+    struct sockaddr_in server_addr;
+
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
+    server_addr.sin_port = htons(SERVER_PORT);
+
+    printf("Client send: %s\n", buf);
+    sendto(fd, buf, len, t_len, (struct sockaddr *)&server_addr, sizeof(server_addr));
+
+    return 0;
+}
+
 void udp_msg_sender(int fd, struct sockaddr *dst)
 {
 
@@ -25,23 +51,47 @@ void udp_msg_sender(int fd, struct sockaddr *dst)
 
 int main(int argc, char *argv[])
 {
-    int client_fd;
-    struct sockaddr_in ser_addr;
+    char buf[BUFF_LEN];
+    int hr = 0;
+    int client_fd = create_udp_sock();
+    ikcpcb *kcp = ikcp_create(0x00112233, (void *)&client_fd);
 
-    client_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (client_fd < 0)
+    ikcp_setoutput(kcp, udp_output);
+
+    IUINT32 current = iclock();
+    IUINT32 slap = current + 20;
+    IUINT32 index = 0;
+    IUINT32 next = 0;
+    IINT64 sumrtt = 0;
+    int count = 0;
+    int maxrtt = 0;
+
+    ikcp_wndsize(kcp, 128, 128);
+    ikcp_nodelay(kcp, 0, 10, 0, 1);
+
+    while (1)
     {
-        printf("create socket fail!\n");
-        return -1;
+        isleep(1);
+        current = iclock();
+        ikcp_update(kcp, iclock());
+
+        for (; current >= slap; slap += 20)
+        {
+            ((IUINT32 *)buf)[0] = index++;
+            ((IUINT32 *)buf)[1] = current;
+
+            ikcp_send(kcp, buf, 8);
+        }
+
+        while (1)
+        {
+            hr = ikcp_recv(kcp, buf, 10);
+            if (hr < 0)
+                break;
+        }
     }
 
-    memset(&ser_addr, 0, sizeof(ser_addr));
-    ser_addr.sin_family = AF_INET;
-    ser_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
-    // ser_addr.sin_addr.s_addr = htonl(INADDR_ANY); // 注意网络序转换
-    ser_addr.sin_port = htons(SERVER_PORT); // 注意网络序转换
-
-    udp_msg_sender(client_fd, (struct sockaddr *)&ser_addr);
+    // udp_msg_sender(client_fd, (struct sockaddr *)&ser_addr);
 
     close(client_fd);
 
