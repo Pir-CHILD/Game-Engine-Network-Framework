@@ -1,7 +1,3 @@
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 //=====================================================================
 //
 // KCP - A Better ARQ Protocol Implementation
@@ -1300,6 +1296,4 @@ IUINT32 ikcp_getconv(const void *ptr)
 	return conv;
 }
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+

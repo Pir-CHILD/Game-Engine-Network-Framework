@@ -86,6 +86,7 @@ int main(int argc, char *argv[])
 
     while (1)
     {
+        // // Sleep for a short time to avoid using too much CPU
         isleep(1);
         current = iclock();
         ikcp_update(kcp, iclock());

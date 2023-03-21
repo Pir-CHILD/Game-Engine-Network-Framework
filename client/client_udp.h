@@ -1,19 +1,22 @@
-#ifndef _SERVER_UDP
-#define _SERVER_UDP
+#ifndef _CLIENT_UDP
+#define _CLIENT_UDP
 
-#include <iostream>
 #include <cstdio>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <cstring>
 #include <unistd.h>
-#include "ikcp.h"
-#include "CLI11.hpp"
+#include <arpa/inet.h>
+#include <time.h>
+#include "../3rdparty/kcp-1.7/ikcp.h"
+#include "../3rdparty/CLI11/CLI11.hpp"
 
 #define SERVER_PORT 12306
 #define BUFF_LEN 2000
+#define SERVER_IP "127.0.0.1"
 
 /* get system time */
 static inline void itimeofday(long *sec, long *usec)
@@ -79,7 +82,6 @@ static inline void isleep(unsigned long millisecond)
 
 int create_udp_sock();
 int udp_output(const char *buf, int len, ikcpcb *kcp, void *user);
-int msleep(long msen); // sleep milliseconds
-void handle_udp_msg(int fd);
+void udp_msg_sender(int fd, struct sockaddr *dst);
 
 #endif
