@@ -14,7 +14,7 @@ int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
 {
     int fd = *(int *)user;
 
-    printf("Client send: %s\n", buf);
+    // printf("Client send: %s\n", buf);
     sendto(fd, buf, len, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
 
     return 0;
@@ -45,6 +45,20 @@ void udp_msg_sender(int fd, struct sockaddr *dst)
 
 int main(int argc, char *argv[])
 {
+    CLI::App app;
+
+    int snd_window{32}, rcv_window{32};
+    app.add_option("--sndwnd", snd_window, "sndwnd size");
+    app.add_option("--rcvwnd", rcv_window, "rcvwnd size");
+
+    int nodelay{0}, interval{100}, resend{0}, nc{0};
+    app.add_option("--nodelay", nodelay, "0: disable(default), 1: enable");
+    app.add_option("--interval", interval, "interval update timer interval in millisec, 100ms(default)");
+    app.add_option("--resend", resend, "0: disable fast resend(default), 1: enable");
+    app.add_option("--nc", nc, "0: normal congestion control(default), 1: disable congestion control");
+
+    CLI11_PARSE(app, argc, argv);
+
     char buf[BUFF_LEN];
     int hr = 0;
     int client_fd = create_udp_sock();
@@ -65,8 +79,8 @@ int main(int argc, char *argv[])
     int count = 0;
     int maxrtt = 0;
 
-    ikcp_wndsize(kcp, 128, 128);
-    ikcp_nodelay(kcp, 0, 10, 0, 1);
+    ikcp_wndsize(kcp, snd_window, rcv_window);
+    ikcp_nodelay(kcp, nodelay, interval, resend, nc);
 
     IUINT32 ts1 = iclock();
 
@@ -91,7 +105,7 @@ int main(int argc, char *argv[])
                 break;
             ikcp_input(kcp, buf, hr);
         }
-        printf("1\n");
+
         while (1)
         {
             hr = ikcp_recv(kcp, buf, 10);

@@ -12,6 +12,7 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include "ikcp.h"
+#include "CLI11.hpp"
 
 #define SERVER_PORT 12306
 #define BUFF_LEN 2000
