@@ -57,6 +57,9 @@ int main(int argc, char *argv[])
     app.add_option("--resend", resend, "0: disable fast resend(default), 1: enable");
     app.add_option("--nc", nc, "0: normal congestion control(default), 1: disable congestion control");
 
+    std::string server_ip = "127.0.0.1";
+    app.add_option("--sIP", server_ip, "server IP");
+
     CLI11_PARSE(app, argc, argv);
 
     char buf[BUFF_LEN];
@@ -66,7 +69,7 @@ int main(int argc, char *argv[])
 
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
+    server_addr.sin_addr.s_addr = inet_addr(server_ip.c_str());
     server_addr.sin_port = htons(SERVER_PORT);
 
     ikcp_setoutput(kcp, udp_output);

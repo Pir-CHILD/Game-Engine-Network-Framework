@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <cstring>
+#include <string>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <time.h>
@@ -16,7 +17,6 @@
 
 #define SERVER_PORT 12306
 #define BUFF_LEN 2000
-#define SERVER_IP "127.0.0.1"
 
 /* get system time */
 static inline void itimeofday(long *sec, long *usec)
