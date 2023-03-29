@@ -81,7 +81,7 @@ static inline void isleep(unsigned long millisecond)
 }
 
 int create_udp_sock();
+
 int udp_output(const char *buf, int len, ikcpcb *kcp, void *user);
-void udp_msg_sender(int fd, struct sockaddr *dst);
 
 #endif

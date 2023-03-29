@@ -20,29 +20,6 @@ int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
     return 0;
 }
 
-void udp_msg_sender(int fd, struct sockaddr *dst)
-{
-
-    socklen_t len;
-    struct sockaddr_in src;
-    while (1)
-    {
-        char buf[BUFF_LEN] = "TEST UDP MSG!\n";
-        len = sizeof(*dst);
-        printf("client:%s\n", buf); // 打印自己发送的信息
-        sendto(fd, buf, BUFF_LEN, 0, dst, len);
-        memset(buf, 0, BUFF_LEN);
-        recvfrom(fd, buf, BUFF_LEN, 0, (struct sockaddr *)&src, &len); // 接收来自server的信息
-        printf("server:%s\n", buf);
-        sleep(1); // 一秒发送一次消息
-    }
-}
-
-/*
-    client:
-            socket-->sendto-->revcfrom-->close
-*/
-
 int main(int argc, char *argv[])
 {
     CLI::App app;
@@ -132,7 +109,7 @@ int main(int argc, char *argv[])
             if (rtt > (IUINT32)maxrtt)
                 maxrtt = rtt;
 
-            printf("[RECV] mode=%d sn=%d rtt=%d\n", 1, (int)sn, (int)rtt);
+            printf("[RECV] sn=%d rtt=%d\n", (int)sn, (int)rtt);
         }
         if (next > 1000)
             break;
@@ -142,11 +119,15 @@ int main(int argc, char *argv[])
 
     ikcp_release(kcp);
 
-    const char *names[3] = {"default", "normal", "fast"};
-    printf("%s mode result (%dms):\n", names[1], (int)ts1);
-    printf("avgrtt=%d maxrtt=%d tx=%d\n", (int)(sumrtt / count), (int)maxrtt, (int)0);
-
-    // udp_msg_sender(client_fd, (struct sockaddr *)&ser_addr);
+    printf("---\n");
+    printf("sndwnd=%d rcvwnd=%d\n", snd_window, rcv_window);
+    const char *able[] = {"disable", "enable"};
+    printf("nodelay:            %s\n", able[nodelay]);
+    printf("interval(ms):       %d\n", interval);
+    printf("fast resend:        %s\n", able[resend]);
+    printf("congestion control: %s\n", able[1 - nc]);
+    printf("---\n");
+    printf("avgrtt=%d maxrtt=%d\n", (int)(sumrtt / count), (int)maxrtt);
 
     close(client_fd);
 
