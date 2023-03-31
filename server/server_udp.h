@@ -1,14 +1,17 @@
 #ifndef _SERVER_UDP
 #define _SERVER_UDP
 
+#include <stdio.h>
+#include <limits.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
 #include <iostream>
-#include <cstdio>
+#include <map>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/time.h>
 #include <netinet/in.h>
-#include <cstring>
-#include <unistd.h>
 #include "../3rdparty/kcp-1.7/ikcp.h"
 #include "../3rdparty/CLI11/CLI11.hpp"
 
@@ -78,8 +81,11 @@ static inline void isleep(unsigned long millisecond)
 }
 
 int create_udp_sock();
+int create_tcp_sock();
+
+IUINT32 get_rand_conv();
+IUINT32 get_conv();
+
 int udp_output(const char *buf, int len, ikcpcb *kcp, void *user);
-int msleep(long msen); // sleep milliseconds
-void handle_udp_msg(int fd);
 
 #endif
