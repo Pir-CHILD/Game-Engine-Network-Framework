@@ -1,6 +1,6 @@
 #include "server_udp.h"
-// TODO：1. 建立TCP连接
-// TODO: 2. 协商conv，即握手过程(随机生成，随后递增序列号即可)
+// 1. 建立TCP连接
+// 2. 协商conv，即握手过程(随机生成，随后递增序列号即可)
 // TODO: 3. 加密该TCP连接，同时对接下来kcp所传输连接加密
 // TODO: 4. 引入线程，对每个kcp连接重复上述操作
 IUINT32 last_conv;
@@ -24,6 +24,27 @@ IUINT32 get_conv()
     return last_conv;
 }
 
+int create_tcp_sock()
+{
+    int fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    assert(fd >= 0);
+
+    int opt = 1, res = 0;
+    res = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
+    assert(res == 0);
+
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(CONV_PORT);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    res = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
+    assert(res != -1);
+
+    return fd;
+}
+
 int create_udp_sock()
 {
     int fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
@@ -32,7 +53,7 @@ int create_udp_sock()
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(SERVER_PORT);
+    addr.sin_port = htons(KCP_PORT);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     int ret = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
@@ -67,15 +88,29 @@ int main(int argc, char *argv[])
 
     CLI11_PARSE(app, argc, argv);
 
+    int tcp_fd = create_tcp_sock();
+    int res = listen(tcp_fd, 3);
+    assert(res == 0);
+
+    int new_client = accept(tcp_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr);
+    assert(new_client > 0);
+
     char buf[BUFF_LEN];
     int hr = 0;
-    int server_fd = create_udp_sock();
-    ikcpcb *kcp = ikcp_create(0x00112233, (void *)&server_fd);
+
+    hr = read(tcp_fd, buf, BUFF_LEN);
+    printf("%s\n", buf);
+    IUINT32 conv_num = get_rand_conv();
+    send(tcp_fd, (char *)conv_num, strlen((char *)conv_num), 0);
+    printf("Send conv num");
+
+    int kcp_fd = create_udp_sock();
+    ikcpcb *kcp = ikcp_create(0x00112233, (void *)&kcp_fd);
 
     ikcp_wndsize(kcp, snd_window, rcv_window);
     ikcp_nodelay(kcp, nodelay, interval, resend, nc);
 
-    // setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+    // setsockopt(kcp_fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
     ikcp_setoutput(kcp, udp_output);
 
     while (1)
@@ -86,7 +121,7 @@ int main(int argc, char *argv[])
         while (1)
         {
             socklen_t len = sizeof(client_addr);
-            hr = recvfrom(server_fd, buf, BUFF_LEN, 0, (struct sockaddr *)&client_addr, &len);
+            hr = recvfrom(kcp_fd, buf, BUFF_LEN, 0, (struct sockaddr *)&client_addr, &len);
             if (hr < 0)
                 break;
             ikcp_input(kcp, buf, hr);
@@ -102,7 +137,7 @@ int main(int argc, char *argv[])
     };
 
     ikcp_release(kcp);
-    close(server_fd);
+    close(kcp_fd);
 
     return 0;
 }
