@@ -24,7 +24,6 @@ int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
 {
     int fd = *(int *)user;
 
-    // printf("Client send: %s\n", buf);
     sendto(fd, buf, len, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
 
     return 0;
@@ -32,6 +31,7 @@ int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
 
 int main(int argc, char *argv[])
 {
+    /* CLI init */
     CLI::App app;
 
     int snd_window{32}, rcv_window{32};
@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
 
     CLI11_PARSE(app, argc, argv);
 
+    /* Socket init */
     char buf[BUFF_LEN];
     int hr = 0;
 
@@ -57,23 +58,28 @@ int main(int argc, char *argv[])
     server_addr.sin_addr.s_addr = inet_addr(server_ip.c_str());
     server_addr.sin_port = htons(CONV_PORT);
 
+    /* Tcp get conv */
     int tcp_fd = create_tcp_sock();
     int res = connect(tcp_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
     assert(res == 0);
 
     strcpy(buf, "conv_num");
-    printf("%s %d\n", buf, sizeof(buf));
-    hr = send(tcp_fd, buf, sizeof(buf), 0); // 阻塞
-    if (hr < 0)
+    if ((hr = send(tcp_fd, buf, sizeof(buf), 0)) < 0)
+    {
         printf("send error: %s(errno: %d)\n", strerror(errno), errno);
-    assert(hr > 0);
-    hr = recv(tcp_fd, buf, BUFF_LEN, MSG_WAITALL);
-    assert(hr > 0);
+        return -1;
+    }
+    if ((hr = recv(tcp_fd, buf, BUFF_LEN, MSG_WAITALL)) < 0)
+    {
+        printf("recv error: %s(errno: %d)\n", strerror(errno), errno);
+        return -1;
+    }
     IUINT32 conv_num = 0;
     sscanf(buf, "%u", &conv_num);
     printf("Recv conv num: %d\n", conv_num);
     close(tcp_fd);
 
+    /* Udp init kcp */
     server_addr.sin_port = htons(KCP_PORT);
     int client_fd = create_udp_sock();
     ikcpcb *kcp = ikcp_create(conv_num, (void *)&client_fd);
@@ -90,9 +96,10 @@ int main(int argc, char *argv[])
     ikcp_wndsize(kcp, snd_window, rcv_window);
     ikcp_nodelay(kcp, nodelay, interval, resend, nc);
 
+    /* Kcp test */
     while (1)
     {
-        // // Sleep for a short time to avoid using too much CPU
+        // Sleep for a short time to avoid using too much CPU
         isleep(1);
         current = iclock();
         ikcp_update(kcp, iclock());
