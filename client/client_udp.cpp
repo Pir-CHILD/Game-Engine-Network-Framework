@@ -1,10 +1,20 @@
 #include "client_udp.h"
-
+// TODO：1. 建立TCP连接
+// TODO: 2. 协商conv，即握手过程
+// TODO: 3. 加密该TCP连接，同时对接下来kcp所传输连接加密
 struct sockaddr_in server_addr;
 
 int create_udp_sock()
 {
     int fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
+    assert(fd >= 0);
+
+    return fd;
+}
+
+int create_tcp_sock()
+{
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
     assert(fd >= 0);
 
     return fd;
@@ -41,14 +51,32 @@ int main(int argc, char *argv[])
 
     char buf[BUFF_LEN];
     int hr = 0;
-    int client_fd = create_udp_sock();
-    ikcpcb *kcp = ikcp_create(0x00112233, (void *)&client_fd);
 
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr(server_ip.c_str());
-    server_addr.sin_port = htons(SERVER_PORT);
+    server_addr.sin_port = htons(CONV_PORT);
 
+    int tcp_fd = create_tcp_sock();
+    int res = connect(tcp_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    assert(res == 0);
+
+    strcpy(buf, "conv_num");
+    printf("%s %d\n", buf, sizeof(buf));
+    hr = send(tcp_fd, buf, sizeof(buf), 0); // 阻塞
+    if (hr < 0)
+        printf("send error: %s(errno: %d)\n", strerror(errno), errno);
+    assert(hr > 0);
+    hr = recv(tcp_fd, buf, BUFF_LEN, MSG_WAITALL);
+    assert(hr > 0);
+    IUINT32 conv_num = 0;
+    sscanf(buf, "%u", &conv_num);
+    printf("Recv conv num: %d\n", conv_num);
+    close(tcp_fd);
+
+    server_addr.sin_port = htons(KCP_PORT);
+    int client_fd = create_udp_sock();
+    ikcpcb *kcp = ikcp_create(conv_num, (void *)&client_fd);
     ikcp_setoutput(kcp, udp_output);
 
     IUINT32 current = iclock();
@@ -61,8 +89,6 @@ int main(int argc, char *argv[])
 
     ikcp_wndsize(kcp, snd_window, rcv_window);
     ikcp_nodelay(kcp, nodelay, interval, resend, nc);
-
-    IUINT32 ts1 = iclock();
 
     while (1)
     {
@@ -114,8 +140,6 @@ int main(int argc, char *argv[])
         if (next > 1000)
             break;
     }
-
-    ts1 = iclock() - ts1;
 
     ikcp_release(kcp);
 

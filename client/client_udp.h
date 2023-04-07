@@ -15,7 +15,8 @@
 #include "../3rdparty/kcp-1.7/ikcp.h"
 #include "../3rdparty/CLI11/CLI11.hpp"
 
-#define SERVER_PORT 12306
+#define CONV_PORT 12305
+#define KCP_PORT 12306
 #define BUFF_LEN 2000
 
 /* get system time */
@@ -81,6 +82,7 @@ static inline void isleep(unsigned long millisecond)
 }
 
 int create_udp_sock();
+int create_tcp_sock();
 
 int udp_output(const char *buf, int len, ikcpcb *kcp, void *user);
 

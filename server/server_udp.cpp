@@ -2,6 +2,8 @@
 // 1. 建立TCP连接
 // 2. 协商conv，即握手过程(随机生成，随后递增序列号即可)
 // TODO: 3. 加密该TCP连接，同时对接下来kcp所传输连接加密
+//       3.1 RSA 非对称加密以密钥协商
+//       3.2 AES 对称加密以进行数据通信
 // TODO: 4. 引入线程，对每个kcp连接重复上述操作
 IUINT32 last_conv;
 struct sockaddr_in client_addr;
@@ -26,12 +28,12 @@ IUINT32 get_conv()
 
 int create_tcp_sock()
 {
-    int fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
     assert(fd >= 0);
 
     int opt = 1, res = 0;
-    res = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
-    assert(res == 0);
+    // res = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
+    // assert(res == 0);
 
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
@@ -98,14 +100,22 @@ int main(int argc, char *argv[])
     char buf[BUFF_LEN];
     int hr = 0;
 
-    hr = read(tcp_fd, buf, BUFF_LEN);
-    printf("%s\n", buf);
+    memset(buf, 0, sizeof(buf));
+
+    hr = recv(new_client, buf, BUFF_LEN, 0);
+    if (hr < 0)
+        printf("recv error: %s(errno: %d)\n", strerror(errno), errno);
+    printf("%s %d\n", buf, hr);
+    assert(hr > 0);
     IUINT32 conv_num = get_rand_conv();
-    send(tcp_fd, (char *)conv_num, strlen((char *)conv_num), 0);
-    printf("Send conv num");
+    const char *conv_num_char = std::to_string(conv_num).c_str();
+    hr = send(new_client, conv_num_char, strlen(conv_num_char), 0);
+    assert(hr > 0);
+    printf("Send conv num: %d\n", conv_num);
+    close(new_client);
 
     int kcp_fd = create_udp_sock();
-    ikcpcb *kcp = ikcp_create(0x00112233, (void *)&kcp_fd);
+    ikcpcb *kcp = ikcp_create(conv_num, (void *)&kcp_fd);
 
     ikcp_wndsize(kcp, snd_window, rcv_window);
     ikcp_nodelay(kcp, nodelay, interval, resend, nc);
