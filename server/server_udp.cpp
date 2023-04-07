@@ -33,8 +33,8 @@ int create_tcp_sock()
     assert(fd >= 0);
 
     int opt = 1, res = 0;
-    // res = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
-    // assert(res == 0);
+    res = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
+    assert(res == 0);
 
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
@@ -131,6 +131,8 @@ int main(int argc, char *argv[])
     ikcp_nodelay(kcp, nodelay, interval, resend, nc);
 
     /* Kcp test */
+    bool test_flag = false;
+    IINT16 empty_count = 0;
     while (1)
     {
         isleep(1);
@@ -141,7 +143,11 @@ int main(int argc, char *argv[])
             socklen_t len = sizeof(client_addr);
             hr = recvfrom(kcp_fd, buf, BUFF_LEN, 0, (struct sockaddr *)&client_addr, &len);
             if (hr < 0)
+            {
+                empty_count++;
                 break;
+            }
+            empty_count = 0;
             ikcp_input(kcp, buf, hr);
         }
 
@@ -149,9 +155,15 @@ int main(int argc, char *argv[])
         {
             hr = ikcp_recv(kcp, buf, 10);
             if (hr < 0)
+            {
+                // printf("2 break\n");
                 break;
+            }
             ikcp_send(kcp, buf, hr); // 回射
         }
+
+        if (empty_count >= SHRT_MAX)
+            break;
     };
 
     ikcp_release(kcp);
