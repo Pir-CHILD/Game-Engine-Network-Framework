@@ -5,6 +5,7 @@
 //       3.1 RSA 非对称加密以密钥协商
 //       3.2 AES 对称加密以进行数据通信
 // TODO: 4. 引入线程，对每个kcp连接重复上述操作
+bool conv_flag;
 IUINT32 last_conv;
 struct sockaddr_in client_addr;
 std::map<IUINT32, ikcpcb *> conv_map;
@@ -76,6 +77,7 @@ int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
 
 int main(int argc, char *argv[])
 {
+    /* CLI init */
     CLI::App app;
 
     int snd_window{32}, rcv_window{32};
@@ -90,39 +92,45 @@ int main(int argc, char *argv[])
 
     CLI11_PARSE(app, argc, argv);
 
-    int tcp_fd = create_tcp_sock();
-    int res = listen(tcp_fd, 3);
-    assert(res == 0);
-
-    int new_client = accept(tcp_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr);
-    assert(new_client > 0);
-
+    /* Socket init */
     char buf[BUFF_LEN];
     int hr = 0;
 
-    memset(buf, 0, sizeof(buf));
+    /* Tcp send conv */
+    int listen_fd = create_tcp_sock();
+    int res = listen(listen_fd, 3);
+    assert(res == 0);
 
-    hr = recv(new_client, buf, BUFF_LEN, 0);
-    if (hr < 0)
+    int client_fd = accept(listen_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr);
+    assert(client_fd > 0);
+
+    if ((hr = recv(client_fd, buf, BUFF_LEN, 0)) < 0)
+    {
         printf("recv error: %s(errno: %d)\n", strerror(errno), errno);
-    printf("%s %d\n", buf, hr);
-    assert(hr > 0);
+        return -1;
+    }
+    printf("recv info: %s\n", buf);
+
     IUINT32 conv_num = get_rand_conv();
     const char *conv_num_char = std::to_string(conv_num).c_str();
-    hr = send(new_client, conv_num_char, strlen(conv_num_char), 0);
-    assert(hr > 0);
+    if ((hr = send(client_fd, conv_num_char, strlen(conv_num_char), 0)) < 0)
+    {
+        printf("send error: %s(errno: %d)\n", strerror(errno), errno);
+        return -1;
+    }
     printf("Send conv num: %d\n", conv_num);
-    close(new_client);
+    close(client_fd);
+    close(listen_fd);
 
+    /* Udp init kcp */
     int kcp_fd = create_udp_sock();
     ikcpcb *kcp = ikcp_create(conv_num, (void *)&kcp_fd);
+    ikcp_setoutput(kcp, udp_output);
 
     ikcp_wndsize(kcp, snd_window, rcv_window);
     ikcp_nodelay(kcp, nodelay, interval, resend, nc);
 
-    // setsockopt(kcp_fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
-    ikcp_setoutput(kcp, udp_output);
-
+    /* Kcp test */
     while (1)
     {
         isleep(1);
