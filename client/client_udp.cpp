@@ -69,13 +69,18 @@ int main(int argc, char *argv[])
         printf("send error: %s(errno: %d)\n", strerror(errno), errno);
         return -1;
     }
-    if ((hr = recv(tcp_fd, buf, BUFF_LEN, MSG_WAITALL)) < 0)
+
+    char recv_buf[100];
+    if ((hr = recv(tcp_fd, recv_buf, sizeof(recv_buf), MSG_WAITALL)) < 0)
     {
         printf("recv error: %s(errno: %d)\n", strerror(errno), errno);
         return -1;
     }
+    handshake_info *info = (handshake_info *)recv_buf;
+
     IUINT32 conv_num = 0;
-    sscanf(buf, "%u", &conv_num);
+    // sscanf(buf, "%u", &conv_num);
+    conv_num = info->conv;
     printf("Recv conv num: %d\n", conv_num);
     close(tcp_fd);
 

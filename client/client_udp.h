@@ -19,6 +19,15 @@
 #define KCP_PORT 12306
 #define BUFF_LEN 2000
 
+typedef struct HandshakeInfo
+{
+    char userKey[50];
+    int size;
+    IUINT32 conv;
+    IINT32 snd_window = 32, rcv_window = 32;
+    IINT32 nodelay = 0, interval = 100, resend = 0, nc = 0;
+} handshake_info;
+
 /* get system time */
 static inline void itimeofday(long *sec, long *usec)
 {
