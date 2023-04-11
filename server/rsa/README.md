@@ -1,6 +1,7 @@
 # 加密方案
 ## 阶段1 
 使用非对称加密 **rsa** 加密C/S的首次TCP连接，商讨**阶段2密钥**细节以及**kcp协议**细节：
+- userKey
 - conv
 - window size(snd, rcv)
 - nodelay, interval, resend, nc
