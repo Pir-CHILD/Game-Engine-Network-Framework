@@ -12,8 +12,6 @@ std::map<IUINT32, ikcpcb *> conv_map;
 
 IUINT32 get_rand_conv()
 {
-    srand((unsigned int)time(NULL));
-
     last_conv = (IUINT32)rand();
 
     return last_conv;
@@ -25,6 +23,16 @@ IUINT32 get_conv()
     last_conv = (t + 1) % UINT32_MAX;
 
     return last_conv;
+}
+
+void get_aes_key(char userKey[], int size)
+{
+    // IUINT8 *userKey = new IUINT8[32];
+    for (int i = 0; i < size; i++)
+    {
+        int t = rand() % 65;
+        userKey[i] = base64_chars[t];
+    }
 }
 
 int create_tcp_sock()
@@ -96,7 +104,10 @@ int main(int argc, char *argv[])
     char buf[BUFF_LEN];
     int hr = 0;
 
-    /* Tcp send conv */
+    /* srand */
+    srand((unsigned int)time(NULL));
+
+    /* Tcp send message */
     int listen_fd = create_tcp_sock();
     int res = listen(listen_fd, 3);
     assert(res == 0);
@@ -111,14 +122,36 @@ int main(int argc, char *argv[])
     }
     printf("recv info: %s\n", buf);
 
+    handshake_info *info = new handshake_info;
+
+    // userKey
+    char *t_userKey = new char[50];
+    get_aes_key(t_userKey, 32);
+    t_userKey[32] = '\0';
+    const char *t = t_userKey;
+    strcpy(info->userKey, t);
+    // size
+    info->size = 32;
+
+    // conv
     IUINT32 conv_num = get_rand_conv();
-    const char *conv_num_char = std::to_string(conv_num).c_str();
-    if ((hr = send(client_fd, conv_num_char, strlen(conv_num_char), 0)) < 0)
+    info->conv = conv_num;
+    // printf("%d\n", info->conv);
+    // const char *conv_num_char = std::to_string(conv_num).c_str();
+
+    // send
+    char send_buf[100];
+    memcpy(send_buf, info, sizeof(handshake_info));
+
+    if ((hr = send(client_fd, send_buf, sizeof(send_buf), 0)) < 0)
     {
         printf("send error: %s(errno: %d)\n", strerror(errno), errno);
         return -1;
     }
-    printf("Send conv num: %d\n", conv_num);
+    // handshake_info *test = (handshake_info *)send_buf;
+    // printf("send_buf size: %d, handshake_info size: %d, conv: %d\n", sizeof(send_buf), sizeof(handshake_info), test->conv);
+
+    // close connect
     close(client_fd);
     close(listen_fd);
 

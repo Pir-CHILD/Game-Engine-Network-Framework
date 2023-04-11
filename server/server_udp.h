@@ -12,12 +12,27 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <openssl/aes.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <openssl/err.h>
 #include "../3rdparty/kcp-1.7/ikcp.h"
 #include "../3rdparty/CLI11/CLI11.hpp"
 
 #define CONV_PORT 12305
 #define KCP_PORT 12306
 #define BUFF_LEN 2000
+
+static const IINT8 base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890+/";
+
+typedef struct HandshakeInfo
+{
+    char userKey[50];
+    int size;
+    IUINT32 conv;
+    IINT32 snd_window = 32, rcv_window = 32;
+    IINT32 nodelay = 0, interval = 100, resend = 0, nc = 0;
+} handshake_info;
 
 /* get system time */
 static inline void itimeofday(long *sec, long *usec)
@@ -86,6 +101,7 @@ int create_tcp_sock();
 
 IUINT32 get_rand_conv();
 IUINT32 get_conv();
+void get_aes_key(char userKey[], int size);
 
 int udp_output(const char *buf, int len, ikcpcb *kcp, void *user);
 
