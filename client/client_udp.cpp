@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     int res = connect(tcp_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
     assert(res == 0);
 
-    strcpy(buf, "conv_num");
+    strcpy(buf, "Request for handshake info");
     if ((hr = send(tcp_fd, buf, sizeof(buf), 0)) < 0)
     {
         printf("send error: %s(errno: %d)\n", strerror(errno), errno);
@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     handshake_info *info = (handshake_info *)recv_buf;
+    printf("Get handshake_info from server OK.\n");
 
     IUINT32 conv_num = 0;
     // sscanf(buf, "%u", &conv_num);

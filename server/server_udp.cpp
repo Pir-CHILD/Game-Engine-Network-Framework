@@ -8,6 +8,7 @@
 bool conv_flag;
 IUINT32 last_conv;
 struct sockaddr_in client_addr;
+socklen_t client_len;
 std::map<IUINT32, ikcpcb *> conv_map;
 
 IUINT32 get_rand_conv()
@@ -112,7 +113,9 @@ int main(int argc, char *argv[])
     int res = listen(listen_fd, 3);
     assert(res == 0);
 
-    int client_fd = accept(listen_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr);
+    memset(&client_addr, 0, sizeof(client_addr));
+    client_len = sizeof(client_addr);
+    int client_fd = accept(listen_fd, (struct sockaddr *)&client_addr, &client_len);
     assert(client_fd > 0);
 
     if ((hr = recv(client_fd, buf, BUFF_LEN, 0)) < 0)
@@ -120,6 +123,7 @@ int main(int argc, char *argv[])
         printf("recv error: %s(errno: %d)\n", strerror(errno), errno);
         return -1;
     }
+    printf("client IP: %s\n", inet_ntoa(client_addr.sin_addr));
     printf("recv info: %s\n", buf);
 
     handshake_info *info = new handshake_info;
@@ -150,6 +154,7 @@ int main(int argc, char *argv[])
     }
     // handshake_info *test = (handshake_info *)send_buf;
     // printf("send_buf size: %d, handshake_info size: %d, conv: %d\n", sizeof(send_buf), sizeof(handshake_info), test->conv);
+    printf("Send handshake_info to client OK.\nconv num: %d\n", info->conv);
 
     // close connect
     close(client_fd);

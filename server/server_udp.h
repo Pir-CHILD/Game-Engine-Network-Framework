@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <iostream>
+#include <arpa/inet.h>
 #include <map>
 #include <sys/time.h>
 #include <sys/types.h>
