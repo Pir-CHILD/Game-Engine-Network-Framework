@@ -47,6 +47,9 @@ int main(int argc, char *argv[])
     std::string server_ip = "127.0.0.1";
     app.add_option("--sIP", server_ip, "server IP");
 
+    int sn_size{1000};
+    app.add_option("--size", sn_size, "kcp test packet sn size, 1000(default)");
+
     CLI11_PARSE(app, argc, argv);
 
     /* Socket init */
@@ -150,7 +153,7 @@ int main(int argc, char *argv[])
 
             printf("[RECV] sn=%d rtt=%d\n", (int)sn, (int)rtt);
         }
-        if (next > 1000)
+        if (next > sn_size)
             break;
     }
 
