@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     int nodelay{0}, interval{100}, resend{0}, nc{0};
     app.add_option("--nodelay", nodelay, "0: disable(default), 1: enable");
     app.add_option("--interval", interval, "interval update timer interval in millisec, 100ms(default)");
-    app.add_option("--resend", resend, "0: disable fast resend(default), 1: enable");
+    app.add_option("--resend", resend, "0: disable fast resend(default), 1: enable, 2: 2 ACK spans will be retransmitted directly");
     app.add_option("--nc", nc, "0: normal congestion control(default), 1: disable congestion control");
 
     std::string server_ip = "127.0.0.1";
@@ -160,7 +160,9 @@ int main(int argc, char *argv[])
     ikcp_release(kcp);
 
     printf("---\n");
-    printf("sndwnd=%d rcvwnd=%d\n", snd_window, rcv_window);
+    printf("server IP:          %s\n", server_ip);
+    printf("sndwnd:             %d\n", snd_window);
+    printf("rcvwnd:             %d\n", rcv_window);
     const char *able[] = {"disable", "enable"};
     printf("nodelay:            %s\n", able[nodelay]);
     printf("interval(ms):       %d\n", interval);

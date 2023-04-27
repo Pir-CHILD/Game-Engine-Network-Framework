@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
     int nodelay{0}, interval{100}, resend{0}, nc{0};
     app.add_option("--nodelay", nodelay, "0: disable(default), 1: enable");
     app.add_option("--interval", interval, "interval update timer interval in millisec, 100ms(default)");
-    app.add_option("--resend", resend, "0: disable fast resend(default), 1: enable");
+    app.add_option("--resend", resend, "0: disable fast resend(default), 1: enable, 2: 2 ACK spans will be retransmitted directly");
     app.add_option("--nc", nc, "0: normal congestion control(default), 1: disable congestion control");
 
     CLI11_PARSE(app, argc, argv);
