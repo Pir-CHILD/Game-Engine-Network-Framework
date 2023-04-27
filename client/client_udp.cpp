@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
     ikcp_release(kcp);
 
     printf("---\n");
-    printf("server IP:          %s\n", server_ip);
+    printf("server IP:          %s\n", server_ip.c_str());
     printf("sndwnd:             %d\n", snd_window);
     printf("rcvwnd:             %d\n", rcv_window);
     const char *able[] = {"disable", "enable"};
