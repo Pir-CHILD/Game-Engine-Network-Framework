@@ -1,10 +1,5 @@
 #include "server_udp.h"
-// 1. 建立TCP连接
-// 2. 协商conv，即握手过程(随机生成，随后递增序列号即可)
-// TODO: 3. 加密该TCP连接，同时对接下来kcp所传输连接加密
-//       3.1 RSA 非对称加密以密钥协商
-//       3.2 AES 对称加密以进行数据通信
-// TODO: 4. 引入线程，对每个kcp连接重复上述操作
+
 bool conv_flag;
 IUINT32 last_conv;
 struct sockaddr_in client_addr;
@@ -129,6 +124,7 @@ int main(int argc, char *argv[])
     handshake_info *info = new handshake_info;
 
     // userKey
+    // TODO: 使用RSA加密首次TCP连接的信息交换，再使用AES加密UDP信息传输
     char *t_userKey = new char[50];
     get_aes_key(t_userKey, 32);
     t_userKey[32] = '\0';
@@ -194,7 +190,6 @@ int main(int argc, char *argv[])
             hr = ikcp_recv(kcp, buf, 10);
             if (hr < 0)
             {
-                // printf("2 break\n");
                 break;
             }
             ikcp_send(kcp, buf, hr); // 回射

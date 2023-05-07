@@ -49,15 +49,17 @@ The result is as follows:
 ```shell
 > ./client
 ...
-[RECV] sn=1002 rtt=106
-[RECV] sn=1003 rtt=86
-[RECV] sn=1004 rtt=66
+[RECV] sn=9999 rtt=22
+[RECV] sn=10000 rtt=40
+[RECV] sn=10001 rtt=21
 ---
-sndwnd=32 rcvwnd=32
+server IP:          43.140.208.229
+sndwnd:             256
+rcvwnd:             256
 nodelay:            disable
-interval(ms):       100
+interval(ms):       40
 fast resend:        disable
 congestion control: enable
 ---
-avgrtt=130 maxrtt=487
+avgrtt=33 maxrtt=77
 ```

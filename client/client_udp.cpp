@@ -1,7 +1,5 @@
 #include "client_udp.h"
-// TODO：1. 建立TCP连接
-// TODO: 2. 协商conv，即握手过程
-// TODO: 3. 加密该TCP连接，同时对接下来kcp所传输连接加密
+
 struct sockaddr_in server_addr;
 
 int create_udp_sock()
